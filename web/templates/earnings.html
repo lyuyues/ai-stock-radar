@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block title %}财报 · Invest Radar{% endblock %}
+{% macro rm(t) %}<form method="post" action="/tracked/{{ t }}/delete" onsubmit="return confirm('不再跟踪 {{ t }}？历史数据保留。')"><input type="hidden" name="back" value="/earnings"><button class="del" title="不再跟踪">×</button></form>{% endmacro %}
+{% block content %}
+<section>
+  <form method="post" action="/tracked" class="addform">
+    <input type="hidden" name="back" value="/earnings">
+    <input name="ticker" placeholder="添加标的，如 AMD" required autocapitalize="characters" autocomplete="off" maxlength="15">
+    <select name="tier"><option value="watch">关注</option><option value="holding">持仓</option></select>
+    <button>添加</button>
+    <span class="muted">加进来的会同时出现在总览、估值等页面；删除只是不再跟踪，历史数据保留。</span>
+  </form>
+</section>
+<section>
+  <h2>即将发布</h2>
+  {% if upcoming %}
+  <div class="scroll"><table>
+    <tr><th>标的</th><th>日期</th><th>还有</th><th>EPS 预期</th><th>近 4 季超预期</th><th></th></tr>
+    {% for e in upcoming %}
+    <tr class="{{ 'soon' if e.days <= 7 else '' }}"><td><a href="/t/{{ e.ticker }}">{{ e.ticker }}</a>
+        {% if e.ticker in holdings %}<span class="chip">持仓</span>{% endif %}</td>
+      <td>{{ e.date }}</td><td>{{ '今天' if e.days == 0 else e.days ~ ' 天' }}</td>
+      <td>{{ '%.2f' % e.eps_est if e.eps_est is not none else '—' }}</td>
+      <td>{{ e.beats ~ '/' ~ e.of if e.of else '—' }}</td>
+      <td class="acts">{{ rm(e.ticker) }}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% if undated %}<div class="muted" style="margin-top:8px">暂无财报日期：{% for t in undated %}<span class="chip"><a href="/t/{{ t }}">{{ t }}</a></span>{% endfor %}（ETF/新股没有财报；刚加的几秒后刷新）</div>{% endif %}
+  <div class="muted" style="margin-top:6px">日期来自 Yahoo Finance，盘前/盘后未区分；公司正式确认前可能是估计日期。</div>
+  {% else %}<div class="muted">暂无已知的财报日期</div>{% endif %}
+</section>
+
+<section>
+  <h2>近期已发布（120 天）</h2>
+  {% if recent %}
+  <div class="scroll"><table>
+    <tr><th>标的</th><th>日期</th><th>EPS 预期</th><th>实际</th><th>超预期</th><th>股价反应</th></tr>
+    {% for e in recent %}
+    <tr id="e-{{ e.ticker }}-{{ e.date }}" class="{{ 'lv3' if e.note and e.note.level == '高' else '' }}"><td><a href="/t/{{ e.ticker }}">{{ e.ticker }}</a></td><td>{{ e.date }}</td>
+      <td>{{ '%.2f' % e.eps_est if e.eps_est is not none else '—' }}</td>
+      <td>{{ '%.2f' % e.eps_actual }}</td>
+      <td>{% if e.surprise_pct is not none %}<span class="{{ 'up' if e.surprise_pct >= 0 else 'down' }}">{{ '%+.1f' % e.surprise_pct }}%</span>{% else %}—{% endif %}</td>
+      <td>{% if e.move_pct is not none %}<span class="{{ 'up' if e.move_pct >= 0 else 'down' }}">{{ '%+.1f' % e.move_pct }}%</span>{% else %}<span class="muted">—</span>{% endif %}</td></tr>
+    <tr class="enote"><td colspan="6">{% if e.note %}<details{{ ' open' if e.note.level == '高' and loop.index <= 6 else '' }}>
+      <summary>{% if e.note.level %}<span class="chip lvl-{{ e.note.level }}">重要度 {{ e.note.level }}</span>{% endif %}
+        {% for t in e.note.tags %}<span class="chip tag">{{ t }}</span>{% endfor %}<span class="muted"> 摘要</span></summary>
+      <div class="prose">{{ e.note.html }}</div></details>
+      {% else %}<span class="muted">摘要待生成（每天收盘后自动补，最新的优先）</span>{% endif %}</td></tr>
+    {% endfor %}
+  </table></div>
+  <div class="muted" style="margin-top:6px">股价反应 = 财报日前一交易日收盘 → 财报次日收盘，同时覆盖盘前和盘后发布。</div>
+  {% else %}<div class="muted">近 120 天没有已发布的财报</div>{% endif %}
+</section>
+{% endblock %}

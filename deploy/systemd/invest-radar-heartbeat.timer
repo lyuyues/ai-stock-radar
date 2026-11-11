@@ -1,0 +1,10 @@
+[Unit]
+Description=Invest Radar heartbeat schedule
+
+[Timer]
+OnCalendar=*-*-* *:20
+Persistent=true
+Unit=invest-radar@heartbeat.service
+
+[Install]
+WantedBy=timers.target

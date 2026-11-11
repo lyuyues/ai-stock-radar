@@ -1,0 +1,35 @@
+# 每周发现新标的：三个渠道，命中越多排名越高
+
+# 渠道 1：量化筛选（Yahoo screener 字段；全部 AND，另外固定 region=us）
+screen:
+  - [gt, intradaymarketcap, 10000000000]          # 市值 > $10B
+  - [gt, quarterlyrevenuegrowth.quarterly, 15]     # 季度营收同比 > 15%
+  - [btwn, peratio.lasttwelvemonths, 0, 30]        # 0 < P/E < 30
+screen_size: 50
+
+# 渠道 2：主题 / 产业链 — 成员距 52 周高点回撤超过阈值即命中（"好公司打折"）
+theme_max_from_high: -20
+themes:
+  AI 基建:
+    tickers: [NVDA, AVGO, AMD, TSM, ANET, VRT, SMCI, MU, CEG, VST, ETN]
+  半导体设备:
+    tickers: [ASML, AMAT, LRCX, KLAC, TER]
+  云 / 软件:
+    tickers: [MSFT, GOOGL, AMZN, ORCL, NOW, SNOW, CRM]
+  能源 / 铜:
+    tickers: [XOM, CVX, FCX, SCCO, COP]
+
+# 渠道 3：聪明钱
+openinsider: true              # 全市场内部人集体买入（openinsider.com/latest-cluster-buys）
+insider_min_value: 500000
+funds_13f:                     # SEC CIK — 新建仓或加仓 ≥20% 算命中
+  Berkshire Hathaway: 1067983
+  Pershing Square: 1336528
+  Appaloosa: 1656456
+  Baupost: 1061768
+  Scion: 1649339
+  Duquesne Family Office: 1536411
+  Lone Pine: 1061165
+  Coatue: 1135730
+min_funds_13f: 1
+top_n: 10

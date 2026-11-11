@@ -1,0 +1,11 @@
+[Unit]
+Description=Invest Radar prices schedule
+
+[Timer]
+OnCalendar=Mon..Fri 06..12:15,45 America/Los_Angeles
+OnCalendar=Mon..Fri 13:15 America/Los_Angeles
+Persistent=true
+Unit=invest-radar@prices.service
+
+[Install]
+WantedBy=timers.target

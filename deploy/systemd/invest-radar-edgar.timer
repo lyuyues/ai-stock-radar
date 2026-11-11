@@ -1,0 +1,10 @@
+[Unit]
+Description=Invest Radar edgar schedule
+
+[Timer]
+OnCalendar=*-*-* 15:00 America/Los_Angeles
+Persistent=true
+Unit=invest-radar@edgar.service
+
+[Install]
+WantedBy=timers.target

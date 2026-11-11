@@ -1,0 +1,10 @@
+[Unit]
+Description=Invest Radar weekly schedule
+
+[Timer]
+OnCalendar=Sun 18:00 America/Los_Angeles
+Persistent=true
+Unit=invest-radar@weekly.service
+
+[Install]
+WantedBy=timers.target

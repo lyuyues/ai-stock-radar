@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}{{ ticker }} 估值 · Invest Radar{% endblock %}
+{% block content %}
+<section>
+  <div class="row" style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+    <h2 style="margin:0;font-size:18px;color:var(--ink)">{{ ticker }} 估值</h2>
+    <a href="/t/{{ ticker }}" style="color:var(--accent);text-decoration:none;font-size:13px">个股页 →</a>
+    <span class="sp" style="flex:1"></span>
+    <span class="muted">数据更新 {{ updated }}</span>
+    <form method="post" action="/v/{{ ticker }}/refresh" style="display:inline"><button class="chipbtn">重新拉 SEC 数据</button></form>
+  </div>
+  {% if error %}<div class="muted" style="color:var(--down);margin-top:6px">上次刷新失败：{{ error }}</div>{% endif %}
+  {% if v and v.note %}<div class="muted" style="margin-top:6px">注：{{ v.note }}</div>{% endif %}
+  {% if v %}
+  <div class="stats" style="margin-top:10px">
+    <div>价格<b>{{ '%.2f' % price if price else '—' }}</b></div>
+    <div>公允价值·自动<b id="fv-auto">—</b></div>
+    <div>公允价值·当前假设<b id="fv-cur">—</b></div>
+    <div>上涨空间<b id="upside">—</b></div>
+    <div>永续价值占比<b id="tshare">—</b></div>
+  </div>
+  {% endif %}
+</section>
+{% if v %}
+<section>
+  <h2>假设 <span class="muted" id="state"></span></h2>
+  <form id="vf" class="vform">
+    <label>必要回报率 %<input name="rr" type="number" step="0.1"></label>
+    <label>永续增长率 %<input name="terminal" type="number" step="0.1"></label>
+    <label>FCF 利润率 %<input name="fcf_margin" type="number" step="0.1"><small>自动 = 近 5 年 FCF/收入（去极值）</small></label>
+    <label>股数（百万）<input name="shares" type="number" step="1"></label>
+    <label>第 1 年收入（百万）<input name="a0" type="number" step="1"><small>分析师一致预期</small></label>
+    <label>第 2 年收入（百万）<input name="a1" type="number" step="1"><small>分析师一致预期</small></label>
+    <label>之后起始增长率 %<input name="g_start" type="number" step="0.1"><small>之后每年线性降到永续增长率</small></label>
+  </form>
+  <div style="display:flex;gap:8px;margin-top:10px">
+    <button id="save" class="chipbtn">保存为我的假设</button>
+    <button id="reset" class="chipbtn">恢复自动</button>
+  </div>
+  <div class="muted" id="warn" style="margin-top:6px"></div>
+</section>
+<section>
+  <h2>10 年预测</h2>
+  <div class="scroll"><table id="proj"></table></div>
+</section>
+<section>
+  <h2>敏感性（公允价值；行 = 必要回报率，列 = 永续增长率；≥ 现价标绿）</h2>
+  <div class="scroll"><table id="sens"></table></div>
+</section>
+<section>
+  <h2>历史财务（10-K，百万美元）</h2>
+  <div class="scroll"><table id="hist" class="fin"></table></div>
+</section>
+{% if v.quarterly %}
+<section>
+  <h2>近 10 个季度（10-Q；Q4 由年报推算）</h2>
+  <div class="scroll"><table id="qtr" class="fin"></table></div>
+</section>
+{% endif %}
+<section class="muted">引擎：{{ v.meta.get('Growth Model') }} · 行业 {{ v.meta.get('Sector') }} · 收入科目 {{ v.meta.get('Revenue Tag') }} · 货币 {{ v.meta.get('Currency') }}</section>
+<script>
+const AUTO = {{ v.auto | tojson }}, MINE = {{ mine | tojson }}, PRICE = {{ price | tojson }}, T = {{ ticker | tojson }};
+const HIST = {{ v.hist | tojson }}, QTR = {{ v.quarterly | tojson }};
+const YEARS = 10, $ = s => document.querySelector(s), f = document.getElementById("vf");
+const pct = x => x == null ? "—" : (x * 100).toFixed(1) + "%";
+const money = x => x == null ? "—" : Math.abs(x) >= 1e3 ? (x / 1e3).toFixed(1) + "B" : x.toFixed(0) + "M";
+
+function project(inp) {
+  const rr = inp.rr, tg = inp.terminal;
+  if (!(rr > tg)) throw new Error("必要回报率必须大于永续增长率");
+  const an = (inp.analyst || []).filter(a => a), n = an.length;
+  let growth;
+  if (inp.use_path && inp.path) growth = inp.path.slice(0, YEARS);
+  else {
+    growth = []; let prev = inp.base_rev;
+    for (const a of an) { growth.push(a / prev - 1); prev = a; }
+    const rest = YEARS - n;
+    for (let i = 0; i < rest; i++) growth.push(rest > 1 ? inp.g_start + (tg - inp.g_start) * i / (rest - 1) : tg);
+  }
+  const rev = []; let cur = inp.base_rev;
+  growth.forEach((g, i) => { cur = i < n ? an[i] : cur * (1 + g); rev.push(cur); });
+  const fcf = rev.map(r => r * inp.fcf_margin), pv = fcf.map((x, i) => x / (1 + rr) ** (i + 1));
+  const pvT = fcf[fcf.length - 1] * (1 + tg) / (rr - tg) / (1 + rr) ** fcf.length;
+  const ev = pv.reduce((a, b) => a + b, 0) + pvT;
+  return { rev, growth, fcf, pv, pvT, ev, fair: inp.shares ? ev / inp.shares : null };
+}
+const merged = mine => mine ? { ...AUTO, ...mine, use_path: false } : { ...AUTO, use_path: true };
+
+function fill(inp) {
+  f.rr.value = (inp.rr * 100).toFixed(2); f.terminal.value = (inp.terminal * 100).toFixed(2);
+  f.fcf_margin.value = (inp.fcf_margin * 100).toFixed(2); f.shares.value = Math.round(inp.shares);
+  f.a0.value = inp.analyst[0] ? Math.round(inp.analyst[0]) : ""; f.a1.value = inp.analyst[1] ? Math.round(inp.analyst[1]) : "";
+  f.g_start.value = (inp.g_start * 100).toFixed(2);
+}
+function read() {
+  const num = el => el.value === "" ? null : +el.value;
+  return { rr: num(f.rr) / 100, terminal: num(f.terminal) / 100, fcf_margin: num(f.fcf_margin) / 100,
+           shares: num(f.shares), g_start: num(f.g_start) / 100, analyst: [num(f.a0), num(f.a1)].filter(x => x) };
+}
+let edited = false;
+function render(inp) {
+  let r;
+  try { r = project(inp); $("#warn").textContent = ""; } catch (e) { $("#warn").textContent = e.message; return; }
+  $("#fv-cur").textContent = r.fair == null ? "—" : r.fair.toFixed(2);
+  if (PRICE && r.fair) { const u = (r.fair / PRICE - 1) * 100; $("#upside").innerHTML = `<span class="${u >= 0 ? "up" : "down"}">${u >= 0 ? "+" : ""}${u.toFixed(0)}%</span>`; }
+  $("#tshare").textContent = pct(r.pvT / r.ev);
+  const yrs = r.rev.map((_, i) => AUTO.base_year + i + 1), nA = inp.use_path ? AUTO.analyst.length : (inp.analyst || []).length;
+  $("#proj").innerHTML = `<tr><th></th>${yrs.map((y, i) => `<th>${y}${i < nA ? "ᵃ" : ""}</th>`).join("")}<th>永续</th></tr>`
+    + `<tr><td>收入</td>${r.rev.map(x => `<td>${money(x)}</td>`).join("")}<td></td></tr>`
+    + `<tr><td>增长率</td>${r.growth.map(x => `<td>${pct(x)}</td>`).join("")}<td>${pct(inp.terminal)}</td></tr>`
+    + `<tr><td>FCF</td>${r.fcf.map(x => `<td>${money(x)}</td>`).join("")}<td></td></tr>`
+    + `<tr><td>现值</td>${r.pv.map(x => `<td>${money(x)}</td>`).join("")}<td>${money(r.pvT)}</td></tr>`;
+  const rrs = [-0.02, -0.01, 0, 0.01, 0.02].map(d => +(inp.rr + d).toFixed(4)), tgs = [-0.01, -0.005, 0, 0.005, 0.01].map(d => +(inp.terminal + d).toFixed(4));
+  $("#sens").innerHTML = `<tr><th></th>${tgs.map(t => `<th>${pct(t)}</th>`).join("")}</tr>` + rrs.map(rr =>
+    `<tr><td>${pct(rr)}</td>${tgs.map(tg => { try { const v = project({ ...inp, rr, terminal: tg }).fair;
+      const cls = PRICE && v >= PRICE ? "up" : ""; const cur = rr === +inp.rr.toFixed(4) && tg === +inp.terminal.toFixed(4);
+      return `<td class="${cls}" style="${cur ? "font-weight:700" : ""}">${v.toFixed(0)}</td>`; } catch (e) { return "<td>—</td>"; } }).join("")}</tr>`).join("");
+  $("#state").textContent = edited ? "（已修改，未保存）" : (MINE ? "（我的假设）" : "（自动）");
+}
+const autoFair = project(merged(null)).fair; $("#fv-auto").textContent = autoFair == null ? "—" : autoFair.toFixed(2);
+let start = merged(MINE); fill(start); render(start);
+f.addEventListener("input", () => { edited = true; render({ ...AUTO, ...read(), use_path: false }); });
+async function post(body) {
+  await fetch(`/v/${T}/inputs`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  location.reload();
+}
+$("#save").onclick = () => post({ inputs: read() });
+$("#reset").onclick = () => post({ inputs: null });
+
+// financial tables
+const ROWS = [["Revenue (M)", "收入", "m"], ["_g", "收入增速", "g"], ["Gross Margin (%)", "毛利率", "p"], ["Operating Margin (%)", "营业利润率", "p"],
+  ["Net Profit Margin (%)", "净利率", "p"], ["Net Income (M)", "净利润", "m"], ["Free Cash Flow (M)", "自由现金流", "m"], ["FCF to Profit Margin (%)", "FCF / 净利润", "p"],
+  ["EPS Diluted ($)", "稀释 EPS", "d"], ["SBC (M)", "股权激励", "m"], ["R&D Expense (M)", "研发", "m"], ["CapEx (M)", "资本开支", "m"],
+  ["Buyback (M)", "回购", "m"], ["Dividends Per Share ($)", "每股分红", "d"], ["ROIC (%)", "ROIC", "p"], ["ROE (%)", "ROE", "p"],
+  ["Total Cash (B)", "现金及投资", "b"], ["Total Debt (B)", "总负债(有息)", "b"], ["Shares Outstanding (M)", "股数(百万)", "n"]];
+function finTable(el, T, ncols) {
+  if (!T) return;
+  const cols = T.cols.slice(-ncols), off = T.cols.length - cols.length, R = T.rows;
+  const fmt = (k, v) => v == null ? "" : k === "p" || k === "g" ? v.toFixed(1) + "%" : k === "m" ? money(v)
+    : k === "b" ? v.toFixed(1) + "B" : k === "d" ? v.toFixed(2) : Math.round(v).toLocaleString();
+  let h = `<tr><th></th>${cols.map(c => `<th>${c}</th>`).join("")}</tr>`;
+  for (const [key, label, k] of ROWS) {
+    let vals;
+    if (key === "_g") { const rv = R["Revenue (M)"] || []; vals = cols.map((_, i) => { const a = rv[off + i], b = rv[off + i - 4 * (el.id === "qtr") - (el.id !== "qtr")];
+      return a != null && b ? (a / b - 1) * 100 : null; }); }
+    else { if (!R[key]) continue; vals = R[key].slice(off); }
+    if (vals.every(v => v == null)) continue;
+    h += `<tr><td>${label}${key === "_g" && el.id === "qtr" ? "(同比)" : ""}</td>${vals.map(v => `<td class="${k === "g" && v != null ? (v >= 0 ? "up" : "down") : ""}">${fmt(k, v)}</td>`).join("")}</tr>`;
+  }
+  el.innerHTML = h;
+}
+finTable($("#hist"), HIST, 10); finTable($("#qtr"), QTR, 10);
+</script>
+{% endif %}
+{% endblock %}

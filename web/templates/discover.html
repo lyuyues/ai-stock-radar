@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}发现 · Invest Radar{% endblock %}
+{% block sub %}<span class="muted">{{ run_date or '尚未运行' }}</span>{% endblock %}
+{% block content %}
+<section style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+  <div class="muted" style="flex:1;min-width:220px">每周日从「量化筛选 / 主题回撤 / 聪明钱」三个渠道找候选，命中渠道越多排越前。
+    排名靠前且还没跟踪的会自动跑 DCF，并由 Claude 写一句点评。{{ run_date or '' }}</div>
+  <a class="chipbtn" href="/discover?sort={{ 'score' if sort == 'upside' else 'upside' }}" style="text-decoration:none">{{ '按渠道排名' if sort == 'upside' else '按估值上涨空间排' }}</a>
+  <a class="chipbtn" href="/discover/settings" style="text-decoration:none">筛选设置</a>
+  {% if running %}<span class="muted">正在重跑…（几分钟，刷新查看）</span>
+  {% else %}<form method="post" action="/discover/run" style="display:inline"><button class="chipbtn">立即重跑</button></form>{% endif %}
+</section>
+<section>
+  {% if rows %}
+  <ul class="alerts">
+    {% for r in rows %}
+    <li>
+      <a href="/t/{{ r.ticker }}" style="color:var(--accent);font-weight:700;text-decoration:none">{{ r.ticker }}</a>
+      {% if r.prof %}<b style="font-weight:600">{{ r.prof.name_zh or r.prof.name }}</b>{% endif %}
+      <span class="muted">{{ '%.1f' % r.score }}</span>
+      {% for n in r.names %}<span class="chip">{{ n }}</span>{% endfor %}
+      {% if r.val and r.val.upside is not none %}<a href="/v/{{ r.ticker }}" class="chip" style="text-decoration:none">DCF <span class="{{ 'up' if r.val.upside >= 0 else 'down' }}">{{ '%+.0f' % r.val.upside }}%</span></a>
+      {% elif r.val and r.val.negative %}<a href="/v/{{ r.ticker }}" class="chip" style="text-decoration:none;color:var(--muted)">DCF 不适用</a>{% endif %}
+      {% if r.tracked %}<span class="chip">已跟踪</span>{% else %}
+      <form method="post" action="/tracked" style="display:inline"><input type="hidden" name="ticker" value="{{ r.ticker }}">
+        <input type="hidden" name="tier" value="watch"><input type="hidden" name="back" value="/discover">
+        <button class="chipbtn">+ 关注</button></form>{% endif %}
+      {% if r.prof and r.prof.desc_zh %}<div class="muted" style="color:var(--ink);opacity:.75">{{ r.prof.desc_zh }}{% if r.prof.industry %} · {{ r.prof.industry }}{% endif %}</div>{% endif %}
+      {% if r.why %}<div style="margin-top:3px;font-size:14px">👍 {{ r.why }}</div>
+        <div style="font-size:14px;color:var(--down)">⚠ {{ r.risk }}</div>{% endif %}
+      {% for ch, notes in r.detail.items() %}
+        {% for n in notes[:3] %}<div class="muted">· {{ n }}</div>{% endfor %}
+      {% endfor %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="muted">还没有候选（每周运行 discover 任务）</div>{% endif %}
+</section>
+{% endblock %}

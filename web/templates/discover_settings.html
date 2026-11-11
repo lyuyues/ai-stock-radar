@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}筛选设置 · Invest Radar{% endblock %}
+{% block content %}
+<form method="post" action="/discover/settings">
+<section>
+  <h2>渠道 1 · 量化筛选（Yahoo，美股，条件同时满足）</h2>
+  {% if error %}<div style="color:var(--down);margin-bottom:8px">{{ error }}</div>{% endif %}
+  <div class="vform">
+    <label>市值 ≥（十亿美元）<input name="mcap_b" type="number" step="any" value="{{ f.mcap_b if f.mcap_b is not none else '' }}"></label>
+    <label>季度营收同比 ≥ %<input name="rev_growth" type="number" step="any" value="{{ f.rev_growth if f.rev_growth is not none else '' }}"></label>
+    <label>P/E 下限<input name="pe_min" type="number" step="any" value="{{ f.pe_min if f.pe_min is not none else '' }}"></label>
+    <label>P/E 上限<input name="pe_max" type="number" step="any" value="{{ f.pe_max if f.pe_max is not none else '' }}"></label>
+    <label>最多取几只<input name="screen_size" type="number" value="{{ f.screen_size }}"></label>
+  </div>
+  <div class="muted" style="margin-top:6px">留空 = 不限制这一项。</div>
+</section>
+<section>
+  <h2>渠道 2 · 主题回撤（好公司打折）</h2>
+  <div class="vform"><label>距 52 周高点跌超过 %（填负数）<input name="theme_max_from_high" type="number" step="any" value="{{ f.theme_max_from_high }}"></label></div>
+  <label class="muted" style="display:block;margin-top:8px">主题列表，每行一个：<code>名称: 代码, 代码, …</code>
+    <textarea name="themes" rows="6" style="width:100%;margin-top:4px;font:inherit;font-size:14px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)">{{ f.themes }}</textarea></label>
+</section>
+<section>
+  <h2>渠道 3 · 聪明钱</h2>
+  <div class="vform">
+    <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" name="openinsider" {{ 'checked' if f.openinsider else '' }} style="width:auto">内部人集体买入（OpenInsider）</label>
+    <label>内部人买入合计 ≥（百万美元）<input name="insider_min_m" type="number" step="any" value="{{ f.insider_min_m }}"></label>
+    <label>13F：至少几家基金同向<input name="min_funds_13f" type="number" value="{{ f.min_funds_13f }}"></label>
+    <label>13F：加仓 ≥ % 才算<input name="min_increase_pct" type="number" step="any" value="{{ f.min_increase_pct }}"></label>
+  </div>
+  <label class="muted" style="display:block;margin-top:8px">跟踪的基金，每行一个：<code>名称: SEC CIK</code>
+    <textarea name="funds" rows="8" style="width:100%;margin-top:4px;font:inherit;font-size:14px;padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink)">{{ f.funds }}</textarea></label>
+</section>
+<section>
+  <h2>估值 & 点评</h2>
+  <div class="vform">
+    <label>对前几只未跟踪候选跑 DCF + Claude 点评<input name="review_n" type="number" value="{{ f.review_n }}"></label>
+    <label>周报里列前几只<input name="top_n" type="number" value="{{ f.top_n }}"></label>
+  </div>
+</section>
+<section style="display:flex;gap:8px">
+  <button class="chipbtn" name="rerun" value="">保存</button>
+  <button class="chipbtn" name="rerun" value="1">保存并立即重跑</button>
+  <a href="/discover" class="chipbtn" style="text-decoration:none">取消</a>
+</section>
+</form>
+{% endblock %}

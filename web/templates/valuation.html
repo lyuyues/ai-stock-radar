@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}估值 · Invest Radar{% endblock %}
+{% block content %}
+<section>
+  <h2>估值（DCF）</h2>
+  <div class="muted">用你原来「股票」app 的估值引擎：SEC 10-K 数据 → 前两年用分析师收入预期，之后增长率线性降到永续增长率 → 10 年 FCF 折现 + 永续价值。
+    点标的进去可以改假设；「我的」= 你保存的假设算出的公允价值。每周六自动重算。</div>
+</section>
+<section>
+  <div class="scroll"><table>
+    <tr><th>标的</th><th>价格</th><th>公允价值·自动</th><th>公允价值·我的</th><th>上涨空间</th><th>FCF 利润率</th><th>第1年收入增速</th></tr>
+    {% for r in rows %}
+    <tr><td><a href="/v/{{ r.ticker }}">{{ r.ticker }}</a>{% if r.ticker in holdings %} <span class="chip">持仓</span>{% endif %}
+      {% if prof.get(r.ticker) %}<div class="muted" style="font-size:12px">{{ prof[r.ticker].name_zh or prof[r.ticker].name }}</div>{% endif %}</td>
+      <td>{{ '%.2f' % r.price if r.price else '—' }}</td>
+      {% if r.auto is not none %}
+      <td>{{ '%.2f' % r.auto }}</td>
+      <td>{{ '%.2f' % r.mine if r.mine is not none else '—' }}</td>
+      <td>{% if r.upside is not none %}<span class="{{ 'up' if r.upside >= 0 else 'down' }}">{{ '%+.0f' % r.upside }}%</span>{% elif r.negative %}<span class="muted">FCF 为负，DCF 不适用</span>{% else %}—{% endif %}</td>
+      <td>{{ '%.1f' % (r.fcf_margin * 100) }}%</td><td>{{ '%+.1f' % (r.g1 * 100) }}%</td>
+      {% else %}
+      <td colspan="5" class="muted" style="text-align:left;white-space:normal">{% if 'CIK' in (r.error or '') %}ETF，没有公司财报，不做 DCF{% elif 'No revenue data' in (r.error or '') %}SEC 没有年报收入数据（ETF/信托，或新上市还没发 10-K）{% else %}{{ r.error or '—' }}{% endif %}</td>
+      {% endif %}</tr>
+    {% endfor %}
+  </table></div>
+  <div class="muted" style="margin-top:6px">上涨空间按「我的」计算，没有保存过假设的用「自动」。DCF 对假设非常敏感，只当参考区间看。</div>
+</section>
+{% endblock %}

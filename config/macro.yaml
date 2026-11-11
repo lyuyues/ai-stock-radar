@@ -1,0 +1,19 @@
+# 宏观"实际值"（滞后，用来核对预期）— FRED series id → 显示名
+fred:
+  DFEDTARU: 联邦基金利率上限
+  DGS10: 10年期美债
+  DGS2: 2年期美债
+  T10Y2Y: 10Y-2Y 利差
+  CPIAUCSL: CPI 指数
+  UNRATE: 失业率
+  VIXCLS: VIX
+  DEXCAUS: USD/CAD
+  BAMLH0A0HYM2: 高收益债利差
+
+# 宏观"预期"（领先）— 预测市场
+markets:
+  kalshi_series: [KXFED]          # Fed 会后利率上限阶梯合约
+  kalshi_max_events: 3            # 最近 3 次议息会议
+  polymarket_tags: [fed-rates]     # "economy" 太杂（含政治八卦），只留 Fed
+  polymarket_max_events: 10
+  shift_hours: 24

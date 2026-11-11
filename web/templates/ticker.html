@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}{{ ticker }} · Invest Radar{% endblock %}
+{% block sub %}<span class="muted">{{ {'holdings': '持仓', 'watchlist': '关注'}.get(tier, '未跟踪') }}</span>{% endblock %}
+
+{% block content %}
+<section>
+  <h2>{{ ticker }} <a href="/v/{{ ticker }}" style="color:var(--accent);text-decoration:none;font-weight:500;margin-left:8px">估值 →</a></h2>
+  {% if prof %}<div style="margin-bottom:4px"><b>{{ prof.name_zh or prof.name }}</b>{% if prof.name_zh %} <span class="muted">{{ prof.name }}</span>{% endif %}
+    {% if prof.desc_zh %}<div class="muted" style="color:var(--ink);opacity:.8">{{ prof.desc_zh }}{% if prof.industry %} · {{ prof.industry }}{% endif %}</div>{% endif %}</div>{% endif %}
+  {% if q.price is none %}
+    <div class="muted">还没有这个标的的数据。</div>
+  {% else %}
+    <div class="big">{{ '%.2f' % q.price }}
+      {% if q.pct is not none %}<span class="{{ 'up' if q.pct >= 0 else 'down' }}" style="font-size:16px">{{ '%+.2f' % q.pct }}%</span>{% endif %}
+    </div>
+    {% if spark %}
+    <svg viewBox="-2 -4 324 88" role="img" aria-label="{{ ticker }} 价格走势">
+      <polyline points="{{ spark }}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round"/>
+    </svg>
+    <div class="muted">{{ n }} 个数据点，自 {{ first }} · 区间 {{ '%.2f' % lo }} – {{ '%.2f' % hi }}</div>
+    {% endif %}
+    <div class="stats">
+      <div>P/E<b>{{ '%.1f' % q.pe if q.pe is not none else '—' }}</b></div>
+      <div>距52周高<b>{{ '%+.1f%%' % q.from_high if q.from_high is not none else '—' }}</b></div>
+      <div>跌破线<b>{{ levels.get('below', '—') }}</b></div>
+      <div>突破线<b>{{ levels.get('above', '—') }}</b></div>
+    </div>
+  {% endif %}
+</section>
+
+<section class="th">
+  <form method="post" action="/theses/{{ ticker }}">
+    <div class="row"><h2 style="margin:0">投资逻辑</h2>
+      {% if thesis and thesis.is_default %}<span class="chip def">默认</span>{% endif %}
+      <span class="sp"></span><button>保存</button></div>
+    <input type="hidden" name="back" value="/t/{{ ticker }}">
+    <textarea name="body" rows="4" placeholder="为什么持有 / 关注？看哪些指标？什么情况下逻辑不成立？">{{ thesis.body if thesis else '' }}</textarea>
+  </form>
+</section>
+
+{% if earnings %}
+<section>
+  <h2>财报（EPS 实际 vs 预期）</h2>
+  <table>
+    <tr><th>日期</th><th>预期</th><th>实际</th><th>差异</th></tr>
+    {% for e in earnings %}
+    <tr><td>{{ e.date }}</td><td>{{ e.eps_est if e.eps_est is not none else '—' }}</td>
+        <td>{{ e.eps_actual if e.eps_actual is not none else '待发布' }}</td>
+        <td>{% if e.surprise_pct is not none %}<span class="{{ 'up' if e.surprise_pct >= 0 else 'down' }}">{{ '%+.1f' % e.surprise_pct }}%</span>{% else %}—{% endif %}</td></tr>
+    {% if e.note %}<tr class="enote"><td colspan="4"><details{{ ' open' if loop.first else '' }}>
+      <summary>{% if e.note.level %}<span class="chip lvl-{{ e.note.level }}">重要度 {{ e.note.level }}</span>{% endif %}
+        {% for t in e.note.tags %}<span class="chip tag">{{ t }}</span>{% endfor %}<span class="muted"> 摘要</span></summary>
+      <div class="prose">{{ e.note.html }}</div></details></td></tr>{% endif %}
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
+
+{% if insiders %}
+<section>
+  <h2>内部人交易（公开市场）</h2>
+  <div class="scroll"><table>
+    <tr><th>日期</th><th>人</th><th>方向</th><th>金额</th></tr>
+    {% for t in insiders %}
+    <tr><td>{{ t.tx_date }}</td><td style="white-space:normal">{{ t.owner }}{% if t.title %} <span class="muted">{{ t.title }}</span>{% endif %}</td>
+        <td class="{{ 'up' if t.code == 'P' else 'down' }}">{{ '买入' if t.code == 'P' else '卖出' }}</td>
+        <td>{{ '$%.2fM' % (t.value / 1e6) if t.value else '—' }}</td></tr>
+    {% endfor %}
+  </table></div>
+</section>
+{% endif %}
+
+{% if filings %}
+<section>
+  <h2>8-K 事件</h2>
+  <ul class="alerts">
+    {% for f in filings %}
+    <li><a href="{{ f.url }}" style="color:var(--accent)">{{ f.filed }}</a> {{ f.label }}
+      {% if f.summary %}<div class="muted" style="margin-top:2px;font-size:13.5px;color:var(--ink);opacity:.8">{{ f.summary }}</div>{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section>
+  <h2>提醒历史</h2>
+  {% if alerts %}
+  <ul class="alerts">
+    {% for a in alerts %}
+    <li>{{ a.icon }} <b>{{ a.title }}</b> <span class="muted">· {{ a.when }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="muted">暂无</div>{% endif %}
+</section>
+{% endblock %}

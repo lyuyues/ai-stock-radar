@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}周报 · Invest Radar{% endblock %}
+{% block content %}
+<section>
+  <h2>周报</h2>
+  {% if rows %}
+  <ul class="alerts">
+    {% for r in rows %}
+    <li><a href="/reports/{{ r.id }}" style="color:var(--accent);font-weight:600;text-decoration:none">{{ r.title }}</a>
+      <span class="muted">· {{ r.when }}{{ '' if r.ok else ' · 仅数据' }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="muted">还没有周报（每周日自动生成）</div>{% endif %}
+</section>
+{% endblock %}

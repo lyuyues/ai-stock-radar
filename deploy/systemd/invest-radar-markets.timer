@@ -1,0 +1,10 @@
+[Unit]
+Description=Invest Radar markets schedule
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=invest-radar@markets.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Invest Radar macro schedule
+
+[Timer]
+OnCalendar=*-*-* 15:30 America/Los_Angeles
+Persistent=true
+Unit=invest-radar@macro.service
+
+[Install]
+WantedBy=timers.target

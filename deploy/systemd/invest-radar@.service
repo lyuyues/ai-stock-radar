@@ -1,0 +1,14 @@
+[Unit]
+Description=Invest Radar job: %i
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=invest
+WorkingDirectory=/opt/invest-radar
+ExecStart=/opt/invest-radar/.venv/bin/python -m radar %i
+TimeoutStartSec=30min
+MemoryMax=1G
+CPUQuota=50%
+Nice=10
+NoNewPrivileges=true

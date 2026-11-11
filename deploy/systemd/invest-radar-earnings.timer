@@ -1,0 +1,10 @@
+[Unit]
+Description=Invest Radar earnings schedule
+
+[Timer]
+OnCalendar=*-*-* 15:10 America/Los_Angeles
+Persistent=true
+Unit=invest-radar@earnings.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}日报 · Invest Radar{% endblock %}
+{% block content %}
+<section style="display:flex;align-items:center;gap:10px">
+  <div class="muted" style="flex:1">每个交易日美东 9:25（开盘前 5 分钟）自动拉数据并生成，约 3 分钟后推送。</div>
+  {% if running %}<span class="muted">生成中…（约 3 分钟，刷新查看）</span>
+  {% else %}<form method="post" action="/daily/run"><button class="chipbtn">立即生成</button></form>{% endif %}
+</section>
+{% if cur %}
+<section class="prose">
+  <div class="muted">{{ cur.title }} · {{ cur.when }}</div>
+  {{ cur.html }}
+</section>
+{% else %}
+<section><div class="muted">还没有日报。</div></section>
+{% endif %}
+{% if rows|length > 1 %}
+<section>
+  <h2>往期</h2>
+  <ul class="alerts">
+    {% for r in rows %}
+    <li><a href="/daily/{{ r.id }}" style="color:var(--accent);{{ 'font-weight:700' if cur and r.id == cur.id else '' }};text-decoration:none">{{ r.title }}</a>
+      <span class="muted">· {{ r.when }}{{ '' if r.ok else ' · 仅数据' }}</span></li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+{% endblock %}

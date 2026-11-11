@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}Invest Radar{% endblock %}</title>
+<style>
+  :root {
+    --bg: #f3f4f6; --card: #ffffff; --ink: #1d1d1f; --muted: #6b7280; --line: #e2e5ea;
+    --up: #1a7f37; --down: #c62828; --accent: #3a5bd9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #111317; --card: #1b1e23; --ink: #eceef2; --muted: #9aa0aa; --line: #2b2f36;
+            --up: #4cc26a; --down: #ff6b6b; --accent: #8aa2ff; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 -apple-system, BlinkMacSystemFont, "PingFang SC", "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 16px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  header a { color: var(--ink); text-decoration: none; font-weight: 700; font-size: 18px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+            padding: 12px 14px; margin-bottom: 14px; }
+  h2 { font-size: 14px; margin: 0 0 8px; color: var(--muted); font-weight: 600; letter-spacing: .02em; }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+  th, td { padding: 7px 4px; text-align: right; border-top: 1px solid var(--line); white-space: nowrap; }
+  th { font-size: 12px; color: var(--muted); font-weight: 500; border-top: none; }
+  th:first-child, td:first-child { text-align: left; }
+  td a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  .up { color: var(--up); } .down { color: var(--down); }
+  ul.alerts { list-style: none; margin: 0; padding: 0; }
+  ul.alerts li { padding: 8px 0; border-top: 1px solid var(--line); }
+  ul.alerts li:first-child { border-top: none; }
+  .big { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  svg { width: 100%; height: auto; display: block; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-top: 8px; }
+  .stats div { font-size: 13px; }
+  .stats b { display: block; font-size: 16px; font-variant-numeric: tabular-nums; }
+  nav.top { display: flex; gap: 6px; overflow-x: auto; margin: -4px 0 14px; padding-bottom: 2px; }
+  nav.top a { flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line);
+          color: var(--ink); text-decoration: none; font-size: 14px; background: var(--card); }
+  nav.top a.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  td.acts { white-space: nowrap; }
+  td.acts form { display: inline; }
+  td.acts button, .chipbtn { font: inherit; font-size: 12px; padding: 1px 7px; border-radius: 999px; cursor: pointer;
+        border: 1px solid var(--line); background: var(--card); color: var(--muted); }
+  td.acts button.del:hover { color: var(--down); border-color: var(--down); }
+  .addform { display: flex; gap: 6px; flex-wrap: wrap; }
+  .addform input, .addform select, .addform button { font: inherit; padding: 6px 10px; border-radius: 8px;
+        border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+  .addform input { flex: 1; min-width: 120px; text-transform: uppercase; }
+  .addform button { background: var(--ink); color: var(--bg); border-color: var(--ink); cursor: pointer; }
+  .chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px;
+          border: 1px solid var(--line); margin-right: 4px; color: var(--muted); }
+  .warn { border-color: var(--down); }
+  tr.soon td { font-weight: 600; }
+  .th textarea { width: 100%; min-height: 110px; font: inherit; font-size: 14px; line-height: 1.55; padding: 8px 10px;
+        border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); resize: vertical; }
+  .th .row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .th .row b { font-size: 15px; } .th .row .sp { flex: 1; }
+  .th button { font: inherit; font-size: 13px; padding: 4px 14px; border-radius: 8px; border: 0;
+        background: var(--ink); color: var(--bg); cursor: pointer; }
+  .th button:disabled { opacity: .35; cursor: default; }
+  .chip.def { color: var(--muted); border-style: dashed; }
+  .pre { white-space: pre-wrap; }
+  .vform { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; }
+  .vform label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+  .vform input { font: inherit; font-size: 15px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line);
+        background: var(--bg); color: var(--ink); font-variant-numeric: tabular-nums; }
+  .vform small { font-size: 11px; }
+  table.fin td, table.fin th { font-size: 13px; padding: 5px 6px; }
+  tr.enote td { border-top: none; padding-top: 0; white-space: normal; text-align: left; }
+  tr.enote summary { cursor: pointer; list-style: none; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  tr.enote summary::-webkit-details-marker { display: none; }
+  tr.enote .prose { font-size: 14px; padding: 6px 2px 10px; }
+  tr.lv3 td:first-child { box-shadow: inset 3px 0 0 var(--down); padding-left: 8px; }
+  .chip.lvl-高 { color: var(--down); border-color: var(--down); font-weight: 600; }
+  .chip.lvl-中 { color: var(--accent); border-color: var(--accent); }
+  .chip.tag { color: var(--ink); }
+  .scroll { overflow-x: auto; }
+  .prose { line-height: 1.65; overflow-wrap: anywhere; }
+  .prose h1 { font-size: 20px; } .prose h2 { font-size: 17px; margin-top: 22px; } .prose h3 { font-size: 15px; }
+  .prose table { display: block; overflow-x: auto; font-size: 13px; }
+  .prose td, .prose th { text-align: left; white-space: normal; min-width: 64px; }
+  .prose a { color: var(--accent); }
+  .prose blockquote { margin: 0; padding: 4px 12px; border-left: 3px solid var(--line); color: var(--muted); }
+  #side, .gut { display: none; }
+  @media (min-width: 1100px) {
+    #side { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; width: var(--side-w, 170px);
+            flex: none; padding: 16px 10px; border-right: 1px solid var(--line); background: var(--card); }
+    #side a { padding: 8px 12px; border-radius: 8px; color: var(--ink); text-decoration: none; font-size: 14px; }
+    #side a:hover { background: var(--bg); }
+    #side a.on { background: var(--ink); color: var(--bg); }
+    #side a.brand { font-weight: 700; font-size: 15px; padding: 4px 12px 14px; background: none; color: var(--ink); }
+    nav.top, header > a { display: none; }
+  }
+  /* ---- agent panel ---- */
+  #agent { display: none; flex-direction: column; background: var(--card); border-left: 1px solid var(--line); }
+  #agent.open { display: flex; position: fixed; inset: 0; z-index: 20; }
+  #agent .ahead { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  #agent .ahead b { flex: 1; }
+  #agent .ahead button, #agent .sugg button { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 999px;
+        border: 1px solid var(--line); background: var(--card); color: var(--muted); cursor: pointer; }
+  #alog { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { font-size: 14px; line-height: 1.6; overflow-wrap: anywhere; }
+  .msg.user { align-self: flex-end; max-width: 85%; background: var(--ink); color: var(--bg); padding: 7px 11px;
+        border-radius: 14px 14px 4px 14px; white-space: pre-wrap; }
+  .msg.bot a { color: var(--accent); }
+  .msg.bot code { font-size: 12px; background: var(--bg); padding: 1px 4px; border-radius: 4px; }
+  .msg.bot .h { font-weight: 700; margin-top: 6px; }
+  .msg .st { color: var(--muted); font-size: 12px; }
+  .msg.err { color: var(--down); font-size: 13px; }
+  .sugg { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+  #aform { display: flex; gap: 6px; padding: 10px 12px; border-top: 1px solid var(--line); }
+  #aq { flex: 1; font: inherit; font-size: 14px; resize: none; padding: 8px 10px; border-radius: 10px; max-height: 140px;
+        border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+  #asend { font: inherit; padding: 0 14px; border-radius: 10px; border: 0; background: var(--ink); color: var(--bg); cursor: pointer; }
+  #asend:disabled { opacity: .4; cursor: default; }
+  #afab { position: fixed; right: 16px; bottom: 16px; z-index: 10; width: 52px; height: 52px; border-radius: 50%;
+        border: 0; background: var(--ink); color: var(--bg); font-size: 14px; cursor: pointer;
+        box-shadow: 0 4px 14px rgba(0,0,0,.2); }
+  @media (min-width: 1100px) {
+    body { display: flex; }
+    main { flex: 1; min-width: 0; }
+    #agent, #agent.open { display: flex; position: sticky; top: 0; height: 100vh; width: var(--agent-w, 400px); flex: none; inset: auto; }
+    main { max-width: none; padding: 16px 24px; }
+    .gut { display: block; flex: none; width: 6px; margin: 0 -3px; position: sticky; top: 0; height: 100vh;
+           cursor: col-resize; z-index: 5; }
+    .gut:hover, .gut.drag { background: var(--accent); opacity: .35; }
+    body.resizing { cursor: col-resize; user-select: none; }
+    #afab, #aclose { display: none; }
+  }
+  .lremind { border:1px solid var(--down); border-radius:10px; padding:8px 12px; margin-bottom:12px; font-size:14px; }
+  .todo { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--line); }
+  .todo .tick { font-size:20px; background:none; border:0; cursor:pointer; color:var(--ink); padding:0; line-height:1; }
+  .todo .tbody { flex:1; } .todo.done b { text-decoration:line-through; color:var(--muted); }
+  .todo .tacts { display:flex; gap:6px; align-items:center; font-size:13px; }
+  .mpick { display:flex; flex-wrap:wrap; gap:4px 10px; font-size:13px; flex-basis:100%; }
+  .mpick label { white-space:nowrap; } .todo.off { opacity:.55; }
+  form.check { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:8px 0; display:flex; flex-direction:column; gap:6px; }
+  form.check.done, form.check.ignore { opacity:.6; } form.check.done b { color:var(--up); }
+  form.check textarea { font:inherit; font-size:14px; padding:6px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); width:100%; box-sizing:border-box; }
+  form.check .crow { display:flex; gap:12px; align-items:center; flex-wrap:wrap; font-size:13px; }
+  .fibar { position:relative; height:14px; background:var(--line); border-radius:7px; margin:10px 0; }
+  .fibar span { display:block; height:100%; background:var(--up); border-radius:7px; }
+  .fibar i { position:absolute; top:-3px; width:2px; height:20px; background:var(--ink); opacity:.5; }
+  svg.fiplot { width:100%; height:140px; } .fiplot .tgt { stroke:var(--up); stroke-dasharray:4 3; }
+  .fiplot .hist { fill:none; stroke:var(--accent); stroke-width:2; } .fiplot .dotp { fill:var(--accent); }
+  .snapform { display:flex; flex-wrap:wrap; gap:8px 14px; align-items:center; font-size:14px; }
+  .snapform input, .snapform select, .snapform button { font:inherit; padding:5px 8px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  .snapform button { background:var(--ink); color:var(--bg); cursor:pointer; }
+  .snaprow { display:flex; gap:6px; flex-basis:100%; flex-wrap:wrap; } .snaprow input[name=item] { flex:1; min-width:10em; }
+  .goal { border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin:10px 0; }
+  .goal .ghead { display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; }
+  .ltabs { display:flex; gap:6px; align-items:center; margin-bottom:12px; flex-wrap:wrap; }
+  .ltabs a, .lhead a { padding:4px 12px; border-radius:999px; border:1px solid var(--line); text-decoration:none; color:var(--ink); }
+  .ltabs a.on, .lhead a.on { background:var(--ink); color:var(--bg); border-color:var(--ink); }
+  .lhead { display:flex; gap:8px; align-items:center; flex-wrap:wrap; } .lhead h2 { margin:0; }
+  .lform { display:flex; flex-direction:column; gap:8px; }
+  .lform input, .lform button { font:inherit; padding:8px 10px; border-radius:8px; border:1px solid var(--line); background:var(--card); color:var(--ink); }
+  .lform button { background:var(--ink); color:var(--bg); cursor:pointer; }
+  .kpis { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:10px 0; }
+  .kpis b { font-size:22px; font-variant-numeric:tabular-nums; }
+  .cbar summary { display:grid; grid-template-columns:7em 1fr 6em 3em 3.5em; gap:8px; align-items:center; cursor:pointer; padding:3px 0; list-style:none; font-size:14px; }
+  .cbar summary::-webkit-details-marker { display:none; }
+  .cname { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .ctrack { height:10px; background:var(--line); border-radius:5px; overflow:hidden; }
+  .ctrack span { display:block; height:100%; background:var(--accent); }
+  .cval, .cpct, .cdelta, td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; }
+  .cdelta { font-size:12px; }
+  .subs { font-size:13px; color:var(--muted); padding:2px 0 8px 7.5em; }
+  svg.mbars { width:100%; height:140px; } svg.mbars text { font-size:8px; fill:var(--muted); }
+  .bi { fill:var(--up); opacity:.55; } .be { fill:var(--accent); opacity:.6; } .be.cur { opacity:1; } .bd { fill:var(--accent); opacity:.9; } .bl { stroke:var(--ink); stroke-width:1.5; stroke-dasharray:2 2; }
+  .dot.bl { background:none; border-top:2px dashed var(--ink); height:0; width:12px; vertical-align:middle; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:2px; } .dot.bi { background:var(--up); opacity:.55; } .dot.be { background:var(--accent); }
+  @media (max-width: 600px) { .cbar summary { grid-template-columns:5.5em 1fr 5em 2.5em 3em; font-size:13px; } .subs { padding-left:0; } .kpis b { font-size:18px; } }
+</style>
+</head>
+{% macro navlinks() %}
+    {% for key, label, href in [('home','总览','/'),('daily','日报','/daily'),('macro','宏观','/macro'),('discover','发现','/discover'),('valuation','估值','/valuation'),('earnings','财报','/earnings'),('theses','逻辑','/theses'),('reports','周报','/reports')] + ledger_nav|default([]) %}
+    <a href="{{ href }}" class="{{ 'on' if active == key else '' }}">{{ label }}</a>
+    {% endfor %}
+{% endmacro %}
+<body>
+<nav id="side"><a class="brand" href="/">Invest Radar</a>{{ navlinks() }}</nav>
+<div class="gut" data-pane="side" title="拖动调整宽度，双击还原"></div>
+<main>
+  <header><a href="/">Invest Radar</a>{% block sub %}{% endblock %}</header>
+  <nav class="top">{{ navlinks() }}</nav>
+  {% block content %}{% endblock %}
+</main>
+<button id="afab" aria-label="打开助手" onclick="agentOpen(true)">助手</button>
+<div class="gut" data-pane="agent" title="拖动调整宽度，双击还原"></div>
+<aside id="agent" aria-label="投资助手">
+  <div class="ahead"><b>助手</b><button onclick="agentReset()">新对话</button><button id="aclose" onclick="agentOpen(false)">关闭</button></div>
+  <div id="alog"></div>
+  <form id="aform" onsubmit="agentSend(event)">
+    <textarea id="aq" rows="1" placeholder="问点什么…（Enter 发送，Shift+Enter 换行）"></textarea>
+    <button id="asend">发送</button>
+  </form>
+</aside>
+<script>
+(() => {
+  // Draggable pane widths (desktop), remembered per browser.
+  const root = document.documentElement, LIM = { side: [120, 360], agent: [280, 900] };
+  const apply = (p, w) => root.style.setProperty(`--${p}-w`, w + "px");
+  for (const p in LIM) { try { const w = +localStorage.getItem("radar-w-" + p); if (w) apply(p, w); } catch (e) {} }
+  document.querySelectorAll(".gut").forEach(g => {
+    const p = g.dataset.pane, el = document.getElementById(p);
+    g.addEventListener("dblclick", () => { root.style.removeProperty(`--${p}-w`);
+      try { localStorage.removeItem("radar-w-" + p); } catch (e) {} });
+    g.addEventListener("pointerdown", e => {
+      e.preventDefault(); g.setPointerCapture(e.pointerId);
+      const x0 = e.clientX, w0 = el.getBoundingClientRect().width, dir = p === "side" ? 1 : -1;
+      let w = w0; g.classList.add("drag"); document.body.classList.add("resizing");
+      const move = ev => { w = Math.round(Math.min(LIM[p][1], Math.max(LIM[p][0], w0 + dir * (ev.clientX - x0)))); apply(p, w); };
+      const up = () => { g.removeEventListener("pointermove", move); g.classList.remove("drag");
+        document.body.classList.remove("resizing"); try { localStorage.setItem("radar-w-" + p, w); } catch (e) {} };
+      g.addEventListener("pointermove", move); g.addEventListener("pointerup", up, { once: true });
+    });
+  });
+})();
+(() => {
+  let LEDGER = false, LEDGER_UI = {};
+  const KEY = LEDGER ? LEDGER_UI.key : "radar-agent";
+  const log = document.getElementById("alog"), q = document.getElementById("aq"), send = document.getElementById("asend");
+  const SUGG = LEDGER ? LEDGER_UI.sugg
+                      : ["这周我的持仓有什么需要注意的？", "解释一下我正在看的这个页面", "Fed 加息预期对我的持仓意味着什么？"];
+  let st;
+  try { st = JSON.parse(sessionStorage.getItem(KEY)) || null; } catch (e) { st = null; }
+  st = st || { sid: null, msgs: [] };
+  const save = () => { try { sessionStorage.setItem(KEY, JSON.stringify(st)); } catch (e) {} };
+
+  const esc = s => s.replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  function md(src) {
+    return src.split("\n").map(line => {
+      let l = esc(line);
+      l = l.replace(/`([^`]+)`/g, "<code>$1</code>")
+           .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+           .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+           .replace(/(^|[\s(（])(https?:\/\/[^\s)）<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>');
+      if (/^#{1,6}\s/.test(line)) return '<div class="h">' + l.replace(/^#{1,6}\s/, "") + "</div>";
+      if (/^\s*[-*]\s/.test(line)) return "<div>• " + l.replace(/^\s*[-*]\s/, "") + "</div>";
+      if (/^\|?\s*:?-{3,}/.test(line)) return "";
+      return l ? "<div>" + l + "</div>" : "<div style='height:6px'></div>";
+    }).join("");
+  }
+  function bubble(m) {
+    const d = document.createElement("div");
+    d.className = "msg " + (m.role === "user" ? "user" : m.role === "err" ? "err" : "bot");
+    if (m.role === "user" || m.role === "err") d.textContent = m.text; else d.innerHTML = md(m.text || "");
+    return d;
+  }
+  function render() {
+    log.innerHTML = "";
+    if (!st.msgs.length) {
+      const s = document.createElement("div"); s.className = "sugg";
+      s.innerHTML = LEDGER ? LEDGER_UI.intro
+                           : '<div class="muted">基于仪表盘数据 + 联网搜索回答，会自动带上你正在看的页面。</div>';
+      SUGG.forEach(t => { const b = document.createElement("button"); b.textContent = t;
+        b.onclick = () => { q.value = t; agentSend(); }; s.appendChild(b); });
+      log.appendChild(s);
+    }
+    st.msgs.forEach(m => log.appendChild(bubble(m)));
+    log.scrollTop = log.scrollHeight;
+  }
+  window.agentOpen = open => { document.getElementById("agent").classList.toggle("open", open); if (open) q.focus(); };
+  window.agentReset = () => { st = { sid: null, msgs: [] }; save(); render(); };
+  q.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); agentSend(); }
+  });
+  q.addEventListener("input", () => { q.style.height = "auto"; q.style.height = q.scrollHeight + "px"; });
+
+  window.agentSend = async e => {
+    if (e) e.preventDefault();
+    const text = q.value.trim();
+    if (!text || send.disabled) return;
+    q.value = ""; q.style.height = "auto"; send.disabled = true;
+    st.msgs.push({ role: "user", text }); const bot = { role: "bot", text: "" }; st.msgs.push(bot); save(); render();
+    const el = log.lastChild, status = document.createElement("div");
+    status.className = "st"; status.textContent = "思考中…"; el.appendChild(status);
+    const paint = () => { el.innerHTML = md(bot.text); if (status.textContent) el.appendChild(status);
+                          log.scrollTop = log.scrollHeight; };
+    try {
+      const r = await fetch(LEDGER ? LEDGER_UI.endpoint : "/agent", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ q: text, sid: st.sid, page: location.pathname }) });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const reader = r.body.getReader(), dec = new TextDecoder(); let buf = "";
+      for (;;) {
+        const { value, done } = await reader.read(); if (done) break;
+        buf += dec.decode(value, { stream: true });
+        let i;
+        while ((i = buf.indexOf("\n\n")) >= 0) {
+          const chunk = buf.slice(0, i); buf = buf.slice(i + 2);
+          if (!chunk.startsWith("data: ")) continue;
+          const ev = JSON.parse(chunk.slice(6));
+          if (ev.t === "session" && ev.v) st.sid = ev.v;
+          else if (ev.t === "text") { bot.text += ev.v; status.textContent = ""; }
+          else if (ev.t === "tool") status.textContent = "🔎 " + ({WebSearch: "搜索中", WebFetch: "读取网页"}[ev.v] || ev.v) + "…";
+          else if (ev.t === "status") status.textContent = ev.v;
+          else if (ev.t === "error") { status.textContent = ""; st.msgs.push({ role: "err", text: "出错：" + ev.v }); }
+          else if (ev.t === "done") status.textContent = "";
+          paint(); save();
+        }
+      }
+    } catch (err) {
+      st.msgs.push({ role: "err", text: "出错：" + err.message });
+    }
+    if (!bot.text) st.msgs.splice(st.msgs.indexOf(bot), 1);
+    save(); render(); send.disabled = false;
+  };
+  render();
+})();
+</script>
+</body>
+</html>

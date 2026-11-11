@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% macro pct(v) -%}
+  {%- if v is none -%}<span class="muted">—</span>
+  {%- else -%}<span class="{{ 'up' if v >= 0 else 'down' }}">{{ '%+.1f' % v }}%</span>{%- endif -%}
+{%- endmacro %}
+{% macro table(rows, other_tier, other_label) %}
+<table>
+  <tr><th>标的</th><th>价格</th><th>今日</th><th>P/E</th><th>距52周高</th><th></th></tr>
+  {% for r in rows %}
+  <tr>
+    <td><a href="/t/{{ r.ticker }}">{{ r.ticker }}</a></td>
+    {% if r.price is none %}
+      <td colspan="4" class="muted">暂无数据</td>
+    {% else %}
+      <td>{{ '%.2f' % r.price }}</td>
+      <td>{{ pct(r.pct) }}</td>
+      <td>{{ '%.1f' % r.pe if r.pe is not none else '—' }}</td>
+      <td>{{ pct(r.from_high) }}</td>
+    {% endif %}
+    <td class="acts">
+      <form method="post" action="/tracked"><input type="hidden" name="ticker" value="{{ r.ticker }}">
+        <input type="hidden" name="tier" value="{{ other_tier }}"><button title="移到{{ other_label }}">→{{ other_label }}</button></form>
+      <form method="post" action="/tracked/{{ r.ticker }}/delete" onsubmit="return confirm('移除 {{ r.ticker }}？历史数据保留。')">
+        <button title="移除" class="del">×</button></form>
+    </td>
+  </tr>
+  {% endfor %}
+</table>
+{% endmacro %}
+
+{% block sub %}<span class="muted">{{ '更新于 ' ~ updated if updated else '尚未抓取' }}</span>{% endblock %}
+
+{% block content %}
+{% if problems %}
+<section class="warn"><h2>⚙️ 系统</h2><div>这些任务上次运行失败：{{ problems | join('、') }}</div></section>
+{% endif %}
+
+{% if fed %}
+<section>
+  <h2>Fed 预期（Kalshi 隐含利率上限）</h2>
+  <table>
+    <tr><th>会议</th><th>日期</th><th>隐含</th></tr>
+    {% for f in fed %}
+    <tr><td style="white-space:normal">{{ f.event }}</td><td>{{ f.close or '—' }}</td>
+        <td>{{ '%.2f%%' % f.implied if f.implied is not none else '—' }}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endif %}
+
+<section>
+  <h2>提醒</h2>
+  {% if alerts %}
+  <ul class="alerts">
+    {% for a in alerts %}
+    <li>{{ a.icon }} <b>{{ a.title }}</b> <span class="muted">· {{ a.when }}{{ '' if a.pushed else ' · 未推送' }}</span>
+      {% if a.body and a.body != a.title %}<div class="muted">{{ a.body }}</div>{% endif %}</li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="muted">暂无提醒</div>{% endif %}
+</section>
+
+<section><h2>持仓</h2>{% if holdings %}{{ table(holdings, 'watch', '关注') }}{% else %}<div class="muted">空</div>{% endif %}</section>
+<section><h2>关注</h2>{% if watchlist %}{{ table(watchlist, 'holding', '持仓') }}{% else %}<div class="muted">空</div>{% endif %}</section>
+<section>
+  <h2>添加标的</h2>
+  <form method="post" action="/tracked" class="addform">
+    <input name="ticker" placeholder="代码，如 TSM" required autocapitalize="characters" autocomplete="off" maxlength="15">
+    <select name="tier"><option value="watch">关注</option><option value="holding">持仓</option></select>
+    <button>添加</button>
+  </form>
+  <div class="muted" style="margin-top:6px">新加的标的会立即补抓价格和 1 年历史；SEC / 财报等在下次定时任务时纳入。</div>
+</section>
+{% endblock %}

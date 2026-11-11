@@ -1,0 +1,18 @@
+[Unit]
+Description=Invest Radar dashboard
+After=network-online.target
+
+[Service]
+User=invest
+WorkingDirectory=/opt/invest-radar
+ExecStart=/opt/invest-radar/.venv/bin/python -m radar serve --host 127.0.0.1 --port 8770
+Restart=on-failure
+MemoryMax=1536M
+CPUQuota=50%
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/invest-radar/data /var/lib/invest
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

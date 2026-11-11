@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}投资逻辑 · Invest Radar{% endblock %}
+{% block content %}
+<section>
+  <h2>投资逻辑</h2>
+  <div class="muted">每个标的为什么持有 / 关注、看什么指标、什么情况下逻辑不成立。日报、周报和右侧助手都会对照这里判断"逻辑是否变化"。
+    标着「默认」的是预填的起点，改过保存后就变成你自己的。</div>
+</section>
+{% for it in items %}
+<section class="th" id="th-{{ it.ticker }}">
+  <form method="post" action="/theses/{{ it.ticker }}">
+    <div class="row">
+      {% if it.ticker == '_GENERAL' %}<b>{{ it.name }}</b>{% else %}<b><a href="/t/{{ it.ticker }}" style="color:var(--accent);text-decoration:none">{{ it.name }}</a></b>{% endif %}
+      {% if it.tier %}<span class="chip">{{ it.tier }}</span>{% endif %}
+      {% if it.is_default %}<span class="chip def">默认</span>{% else %}<span class="muted">更新于 {{ it.updated }}</span>{% endif %}
+      <span class="sp"></span>
+      <button disabled>保存</button>
+    </div>
+    <textarea name="body" rows="4">{{ it.body }}</textarea>
+  </form>
+</section>
+{% endfor %}
+<script>
+document.querySelectorAll(".th form").forEach(f => {
+  const ta = f.querySelector("textarea"), b = f.querySelector("button"), orig = ta.value;
+  const fit = () => { ta.style.height = "auto"; ta.style.height = ta.scrollHeight + 2 + "px"; };
+  fit();
+  ta.addEventListener("input", () => { b.disabled = ta.value === orig; fit(); });
+  ta.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && !b.disabled) f.submit(); });
+});
+window.addEventListener("beforeunload", e => {
+  if ([...document.querySelectorAll(".th button")].some(b => !b.disabled)) e.preventDefault();
+});
+document.querySelectorAll(".th form").forEach(f => f.addEventListener("submit", () =>
+  document.querySelectorAll(".th button").forEach(b => b.disabled = true)));
+</script>
+{% endblock %}

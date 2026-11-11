@@ -1,0 +1,39 @@
+cooldown_hours: 24          # 同一规则 + 同一标的，24h 内只推一次
+daily_cap_notice: 10        # 每天 🟡 上限，超出合并为一条汇总
+quiet_hours: {start: "23:00", end: "07:00", tz: America/Los_Angeles}   # 静默时段只推 🔴
+
+# level: urgent=🔴 响铃 / notice=🟡 普通 / log=⚪ 不推
+# kind: pct_change (单日涨跌幅 ≥ threshold%) | level_cross (穿越 watchlist.yaml 的价位线)
+# tier: holdings | watchlist | all
+rules:
+  - {id: holding_move_urgent, kind: pct_change, tier: holdings,  threshold: 8, level: urgent}
+  - {id: holding_move,        kind: pct_change, tier: holdings,  threshold: 5, level: notice}
+  - {id: watch_move,          kind: pct_change, tier: watchlist, threshold: 8, level: notice}
+  - {id: watch_move_log,      kind: pct_change, tier: watchlist, threshold: 4, level: log}
+  - {id: price_line,          kind: level_cross, tier: all, level: notice}
+
+  # ---- 事件规则（Phase 2）----
+  # 8-K 重大事件：并购 / 完成收购 / 财报重述 / 高管变动 / 破产 / 退市
+  - {id: 8k_material, kind: filing_8k, tier: holdings, items: ["1.01", "1.03", "2.01", "3.01", "4.02", "5.02"], level: urgent}
+  - {id: 8k_watch,    kind: filing_8k, tier: watchlist, items: ["1.01", "1.03", "2.01", "3.01", "4.02", "5.02"], level: notice}
+  # 内部人公开市场买入（卖出太常见，不推）
+  - {id: insider_buy,     kind: insider_buy, tier: all, min_value: 1000000, level: notice}
+  - {id: insider_cluster, kind: insider_cluster, tier: all, min_insiders: 2, days: 30, level: urgent}
+  # 财报：实际 vs 预期
+  - {id: earnings, kind: earnings, tier: all, level: notice}
+  # 预测市场概率 24h 变化
+  - {id: prob_shift, kind: prob_shift, threshold_pp: 15, hours: 24, level: notice}
+  # 宏观阈值（穿越）
+  - {id: vix_30,  kind: macro_cross, series: VIXCLS, above: 30, label: VIX, level: notice}
+  - {id: curve_0, kind: macro_cross, series: T10Y2Y, below: 0, label: 10Y-2Y 利差, level: notice}
+
+# 心跳：任务超过 N 小时没成功跑 → 推 🟡
+heartbeat:
+  prices: 30
+  edgar: 30
+  macro: 30
+  markets: 3
+  earnings: 30
+  discover: 192
+  weekly: 192
+  brief: 96

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}宏观 · Invest Radar{% endblock %}
+{% block content %}
+<section>
+  <h2>Fed 路径：市场预期 vs 实际</h2>
+  {% if fed %}
+  <div class="scroll"><table>
+    <tr><th>会议</th><th>隐含上限</th><th>实际</th><th>预期差</th></tr>
+    {% for f in fed %}
+    <tr><td style="white-space:normal">{{ f.event }}</td>
+        <td>{{ '%.2f%%' % f.implied if f.implied is not none else '—' }}</td>
+        <td>{{ '%.2f%%' % f.actual if f.actual is not none else '未开会' }}</td>
+        <td>{{ '%+.0fbp' % f.gap_bp if f.gap_bp is not none else '—' }}</td></tr>
+    {% endfor %}
+  </table></div>
+  <div class="muted" style="margin-top:6px">隐含利率 = Kalshi “会后利率上限高于 X%” 阶梯合约的期望值。预期差 = 实际 − 会前最后一次隐含值。</div>
+  {% else %}<div class="muted">还没有预测市场数据（运行 markets 任务）</div>{% endif %}
+</section>
+
+<section>
+  <h2>24 小时预期变化</h2>
+  {% if movers %}
+  <ul class="alerts">
+    {% for c in movers %}
+    <li><span class="{{ 'up' if c.delta_pp >= 0 else 'down' }}">{{ '%+.0f' % c.delta_pp }}pp</span>
+      <b>{{ c.label }}</b> <span class="muted">· {{ c.event }} · {{ '%.0f%%' % (c.before * 100) }} → {{ '%.0f%%' % (c.prob * 100) }} · {{ c.source }}</span></li>
+    {% endfor %}
+  </ul>
+  {% else %}<div class="muted">没有超过 3pp 的变化（或历史不足 24 小时）</div>{% endif %}
+</section>
+
+<section>
+  <h2>宏观实际值（FRED，滞后）</h2>
+  <div class="scroll"><table>
+    <tr><th>指标</th><th>最新</th><th>周变化</th><th>走势</th></tr>
+    {% for m in table %}
+    <tr><td>{{ m.label }}<div class="muted">{{ m.date or '' }}</div></td>
+      {% if m.value is none %}<td colspan="3" class="muted">暂无</td>{% else %}
+      <td>{{ '%.2f' % m.value }}{% if m.yoy is not none %}<div class="muted">同比 {{ '%.1f' % m.yoy }}%</div>{% endif %}</td>
+      <td>{{ '%+.2f' % m.change if m.change is not none else '—' }}</td>
+      <td style="width:120px">{% if m.spark %}<svg viewBox="-1 -2 122 32" aria-hidden="true"><polyline points="{{ m.spark }}" fill="none" stroke="var(--accent)" stroke-width="1.5"/></svg>{% endif %}</td>
+      {% endif %}
+    </tr>
+    {% endfor %}
+  </table></div>
+</section>
+
+{% for title, ms in poly %}
+<section>
+  <h2>{{ title }} <span class="chip">Polymarket</span></h2>
+  <table>
+    {% for m in ms %}
+    <tr><td style="white-space:normal">{{ m.label }}</td><td>{{ '%.0f%%' % (m.prob * 100) }}</td></tr>
+    {% endfor %}
+  </table>
+</section>
+{% endfor %}
+{% endblock %}

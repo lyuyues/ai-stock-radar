@@ -1,0 +1,10 @@
+[Unit]
+Description=Invest Radar discover schedule
+
+[Timer]
+OnCalendar=Sun 16:00 America/Los_Angeles
+Persistent=true
+Unit=invest-radar@discover.service
+
+[Install]
+WantedBy=timers.target
